@@ -1,14 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WEB MESSAGE    
-    </title>
+    <title>WEB MESSAGE</title>
     <link rel="stylesheet" href="CSS/message__style.css">
 </head>
 <body>
-    <!-- Pantalla de Login (Protección) -->
+    <!-- Pantalla de Login -->
     <div id="login-screen" class="login-container">
         <h2>Iniciar Sesión</h2>
         <form id="login-form">
@@ -19,33 +18,35 @@
         </form>
     </div>
 
-
+    <!-- Pantalla del Chat -->
     <div id="chat-app" class="chat_container" style="display: none;">
+        
+        <!-- 1. ENCABEZADO (ARRIBA) -->
         <header class="chat-header">
-
-            <!--  -->
             <div class="user-info">
-                <h2>Knot </h2>
-               <span id="user-status" class="user-status"></span>
+                <h2>Knot</h2>
+                <span id="user-status" class="user-status">Online</span>
             </div>
-            
-            <!--  -->
         </header>
-        <main id="chat-box" class="chat-box"> 
-            
-        </main>
-        <form id="chat-form" class="chat-input-area">
-            <input type="text" id="message-input" placeholder="escribe un mensage... "
-            required  autocomplete="off">
-            <button type="submit">SEND</button>
-            <button id="btn-panico" class="panic-btn">BTN P</button>
-        </form>
-    </div>
-     <script type="module"  src="JS/Firebase.js"> </script>
-     <script type="module" src="JS/presence.js"></script>
-     <script type="module " src="JS/btn_panic.js"></script>
-     <script type="module" src="JS/main.js"></script>
 
- 
+        <!-- 2. ÁREA DE MENSAJES (EN EL MEDIO - Estira gracias al flex: 1 del CSS) -->
+        <main id="chat-box" class="chat-box"> 
+            <!-- Mensajes dinámicos -->
+        </main>
+
+        <!-- 3. FORMULARIO CON INPUT Y BOTONES (ABAJO DEL TODO) -->
+        <form id="chat-form" class="chat-input-area">
+            <input type="text" id="message-input" placeholder="escribe un mensaje..." required autocomplete="off">
+            <button type="submit">SEND</button>
+            <button type="button" id="btn-panico" class="panic-btn">BTN P</button>
+        </form>
+
+    </div>
+
+    <!-- Scripts JS -->
+    <script type="module" src="JS/Firebase.js"></script>
+    <script type="module" src="JS/presence.js"></script>
+    <script type="module" src="JS/btn_panic.js"></script>
+    <script type="module" src="JS/main.js"></script>
 </body>
 </html>
