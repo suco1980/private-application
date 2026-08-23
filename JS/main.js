@@ -2,39 +2,49 @@ import {
   signInWithEmailAndPassword, 
   onAuthStateChanged, 
   signOut 
-} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
-  ref, push, onChildAdded, onChildChanged, update, serverTimestamp 
-} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+  ref, push, onChildAdded, onChildChanged, update 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 import { db, auth } from './Firebase.js';
 import { iniciarControlPresencia } from './presence.js';
 import { activarBotonPanico } from './btn_panic.js';
 
-activarBotonPanico(db, auth);
-
+// Selección segura de elementos del DOM
 const loginScreen = document.getElementById("login-screen");
 const chatApp = document.getElementById("chat-app");
 const loginForm = document.getElementById("login-form");
 const loginError = document.getElementById("login-error");
 const logoutBtn = document.getElementById("logout-btn");
 
+// Activación segura del botón de pánico
+try {
+  if (typeof activarBotonPanico === "function" && db && auth) {
+    activarBotonPanico(db, auth);
+  }
+} catch (e) {
+  console.warn("No se pudo inicializar el botón de pánico:", e);
+}
+
+// Control del estado de autenticación
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    loginScreen.style.display = "none";
-    chatApp.style.display = "block";
+    if (loginScreen) loginScreen.style.display = "none";
+    if (chatApp) {
+      chatApp.style.display = "flex";
+      chatApp.classList.add("activo");
+    }
 
-    // 1. Registrar acceso en Firebase
     registrarAcceso(user.uid);
-
-    // 2. Escuchar cuando la otra persona ingresa
     escucharIngresoDePersona(user.uid);
-
-    // 3. Iniciar el chat
     iniciarChat(user.uid);
   } else {
-    loginScreen.style.display = "block";
-    chatApp.style.display = "none";
+    if (loginScreen) loginScreen.style.display = "block";
+    if (chatApp) {
+      chatApp.style.display = "none";
+      chatApp.classList.remove("activo");
+    }
 
     if (loginForm) loginForm.reset();
     if (loginError) loginError.textContent = "";
@@ -49,7 +59,6 @@ function registrarAcceso(uid) {
   }).catch((err) => console.error("Error al registrar acceso:", err));
 }
 
-// ALERTA DE INGRESO VISIBLE EN PANTALLA
 function escucharIngresoDePersona(currentUid) {
   const accesosRef = ref(db, "registros_ingreso");
   const horaInicio = Date.now();
@@ -63,19 +72,7 @@ function escucharIngresoDePersona(currentUid) {
 
       if (fechaAcceso >= horaInicio - 2000) {
         const hora = new Date(fechaAcceso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
         mostrarAlertaPantalla(`🚨 The other person joined the chat at ${hora}`);
-
-        if ("Notification" in window && Notification.permission === "granted") {
-          try {
-            new Notification("🚨 Access Alert", {
-              body: `The other person joined the chat at ${hora}`,
-              icon: "https://cdn-icons-png.flaticon.com/512/1827/1827504.png"
-            });
-          } catch (e) {
-            console.log("Notificaciones nativas bloqueadas en HTTP local");
-          }
-        }
       }
     }
   });
@@ -97,7 +94,6 @@ function mostrarAlertaPantalla(mensaje) {
     alertDiv.style.fontWeight = "bold";
     alertDiv.style.fontSize = "14px";
     alertDiv.style.zIndex = "99999";
-    alertDiv.style.boxShadow = "0 4px 15px rgba(0,0,0,0.3)";
     document.body.appendChild(alertDiv);
   }
 
@@ -109,16 +105,18 @@ function mostrarAlertaPantalla(mensaje) {
   }, 6000);
 }
 
-// Evento Login
+// Formulario de inicio de sesión
 if (loginForm) {
   loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
     if (loginError) loginError.textContent = "";
 
-    const email = document.getElementById("login-email").value;
-    const password = document.getElementById("login-password").value;
+    const emailInput = document.getElementById("login-email");
+    const passwordInput = document.getElementById("login-password");
 
-    signInWithEmailAndPassword(auth, email, password)
+    if (!emailInput || !passwordInput) return;
+
+    signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value)
       .then(() => loginForm.reset())
       .catch(() => {
         if (loginError) {
@@ -128,7 +126,7 @@ if (loginForm) {
   });
 }
 
-// Logout limpio
+// Cierre de sesión
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
     const user = auth.currentUser;
@@ -143,7 +141,7 @@ if (logoutBtn) {
   });
 }
 
-// LÓGICA DE CHAT Y TICKS AZULES
+// Lógica principal del Chat
 function iniciarChat(myUserId) {
   const mensajesRef = ref(db, "mensajes");
   const chatbox = document.getElementById('chat-box');
@@ -152,10 +150,15 @@ function iniciarChat(myUserId) {
 
   if (chatbox) chatbox.innerHTML = '';
 
-  // LLAMADA ÚNICA Y CORRECTA A LA PRESENCIA
-  iniciarControlPresencia(db, myUserId);
+  try {
+    if (typeof iniciarControlPresencia === "function") {
+      iniciarControlPresencia(db, myUserId);
+    }
+  } catch (e) {
+    console.warn("No se pudo iniciar control de presencia:", e);
+  }
 
-  if (chatForm) {
+  if (chatForm && messageInput) {
     chatForm.onsubmit = function(e) {
       e.preventDefault();
       const text = messageInput.value.trim();
@@ -171,10 +174,11 @@ function iniciarChat(myUserId) {
     };
   }
 
-  // Cargar y recibir mensajes
   onChildAdded(mensajesRef, (snapshot) => {
     const msgKey = snapshot.key;
     const data = snapshot.val();
+    if (!data) return;
+
     const isMe = data.senderId === myUserId;
     const date = new Date(data.timestamp || Date.now());
     const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -197,7 +201,6 @@ function iniciarChat(myUserId) {
         <span class="msg-meta">${time}</span>
       `;
       
-      // Marca como leído cuando el receptor abre el mensaje
       if (data.leido !== true) {
         update(ref(db, `mensajes/${msgKey}`), { leido: true });
       }
@@ -209,12 +212,11 @@ function iniciarChat(myUserId) {
     }
   });
 
-  // Cambio de palomitas a azul en tiempo real
   onChildChanged(mensajesRef, (snapshot) => {
     const msgKey = snapshot.key;
     const data = snapshot.val();
 
-    if (data.leido === true) {
+    if (data && data.leido === true) {
       const msgElement = document.querySelector(`[data-id="${msgKey}"]`);
       if (msgElement) {
         const ticks = msgElement.querySelector('.ticks');
