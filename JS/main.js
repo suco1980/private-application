@@ -4,19 +4,22 @@ import {
   signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
-  ref, push, onChildAdded, onChildChanged, update 
+  ref, push, onChildAdded, onChildChanged, update, set 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 import { db, auth } from './Firebase.js';
 import { iniciarControlPresencia } from './presence.js';
 import { activarBotonPanico } from './btn_panic.js';
 
-// Selección segura de elementos del DOM
+// Elementos del DOM
 const loginScreen = document.getElementById("login-screen");
 const chatApp = document.getElementById("chat-app");
 const loginForm = document.getElementById("login-form");
 const loginError = document.getElementById("login-error");
 const logoutBtn = document.getElementById("logout-btn");
+
+// Control de ejecución única para evitar desbordamiento de pila (Stack Overflow)
+let sesionIniciada = false;
 
 // Inicialización del Botón de Pánico
 try {
@@ -24,10 +27,10 @@ try {
     activarBotonPanico(db, auth);
   }
 } catch (e) {
-  console.warn("No se pudo inicializar el botón de pánico:", e);
+  console.warn("No se pudo activar el botón de pánico:", e);
 }
 
-// Control del estado de autenticación de usuario
+// Control del estado de Autenticación
 onAuthStateChanged(auth, (user) => {
   if (user) {
     if (loginScreen) loginScreen.style.display = "none";
@@ -36,10 +39,14 @@ onAuthStateChanged(auth, (user) => {
       chatApp.classList.add("activo");
     }
 
-    registrarAcceso(user.uid);
-    escucharIngresoDePersona(user.uid);
-    iniciarChat(user.uid);
+    if (!sesionIniciada) {
+      sesionIniciada = true;
+      registrarAcceso(user.uid);
+      escucharIngresoDePersona(user.uid);
+      iniciarChat(user.uid);
+    }
   } else {
+    sesionIniciada = false;
     if (loginScreen) loginScreen.style.display = "block";
     if (chatApp) {
       chatApp.style.display = "none";
@@ -52,8 +59,8 @@ onAuthStateChanged(auth, (user) => {
 });
 
 function registrarAcceso(uid) {
-  const accesosRef = ref(db, "registros_ingreso");
-  push(accesosRef, {
+  const accesoRef = ref(db, `registros_ingreso/${uid}`);
+  set(accesoRef, {
     usuarioId: uid,
     fecha: Date.now()
   }).catch((err) => console.error("Error al registrar acceso:", err));
@@ -141,7 +148,7 @@ if (logoutBtn) {
   });
 }
 
-// Lógica Principal del Chat y Mensajería
+// Lógica Principal de Chat y Envío
 function iniciarChat(myUserId) {
   const mensajesRef = ref(db, "mensajes");
   
@@ -161,11 +168,11 @@ function iniciarChat(myUserId) {
 
   if (chatForm && messageInput) {
     const sendBtn = chatForm.querySelector('button[type="submit"]') || chatForm.querySelector('button');
-    
+
     const enviarMensaje = (e) => {
       if (e) e.preventDefault();
       const text = messageInput.value.trim();
-      
+
       if (text !== "") {
         push(mensajesRef, {
           senderId: myUserId,
@@ -177,16 +184,15 @@ function iniciarChat(myUserId) {
           messageInput.value = '';
         })
         .catch((err) => {
-          console.error("Error de Firebase al enviar mensaje:", err);
-          alert("Error al enviar mensaje. Revisa las reglas de seguridad en Firebase.");
+          console.error("Error al enviar el mensaje:", err);
         });
       }
     };
 
     if (chatForm.tagName === "FORM") {
       chatForm.onsubmit = enviarMensaje;
-    } else if (sendBtn) {
-      sendBtn.onclick = enviarMensaje;
+    } else {
+      if (sendBtn) sendBtn.onclick = enviarMensaje;
       messageInput.onkeypress = (e) => {
         if (e.key === 'Enter') enviarMensaje(e);
       };
@@ -220,7 +226,7 @@ function iniciarChat(myUserId) {
         <span class="text">${data.text || data.texto || ""}</span>
         <span class="msg-meta">${time}</span>
       `;
-      
+
       if (data.leido !== true) {
         update(ref(db, `mensajes/${msgKey}`), { leido: true });
       }
@@ -232,7 +238,7 @@ function iniciarChat(myUserId) {
     }
   });
 
-  // Listener para actualización de lecturas (palomitas azules)
+  // Ticks azules
   onChildChanged(mensajesRef, (snapshot) => {
     const msgKey = snapshot.key;
     const data = snapshot.val();
