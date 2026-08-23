@@ -18,7 +18,7 @@ const loginForm = document.getElementById("login-form");
 const loginError = document.getElementById("login-error");
 const logoutBtn = document.getElementById("logout-btn");
 
-// Activación segura del botón de pánico
+// Inicialización del Botón de Pánico
 try {
   if (typeof activarBotonPanico === "function" && db && auth) {
     activarBotonPanico(db, auth);
@@ -27,7 +27,7 @@ try {
   console.warn("No se pudo inicializar el botón de pánico:", e);
 }
 
-// Control del estado de autenticación
+// Control del estado de autenticación de usuario
 onAuthStateChanged(auth, (user) => {
   if (user) {
     if (loginScreen) loginScreen.style.display = "none";
@@ -105,7 +105,7 @@ function mostrarAlertaPantalla(mensaje) {
   }, 6000);
 }
 
-// Formulario de inicio de sesión
+// Formulario de Inicio de Sesión
 if (loginForm) {
   loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -126,7 +126,7 @@ if (loginForm) {
   });
 }
 
-// Cierre de sesión
+// Cierre de Sesión
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
     const user = auth.currentUser;
@@ -141,12 +141,13 @@ if (logoutBtn) {
   });
 }
 
-// Lógica principal del Chat
+// Lógica Principal del Chat y Mensajería
 function iniciarChat(myUserId) {
   const mensajesRef = ref(db, "mensajes");
-  const chatbox = document.getElementById('chat-box');
-  const chatForm = document.getElementById('chat-form');
-  const messageInput = document.getElementById('message-input');
+  
+  const chatbox = document.getElementById('chat-box') || document.querySelector('.chat-box');
+  const chatForm = document.getElementById('chat-form') || document.querySelector('.chat-input-area');
+  const messageInput = document.getElementById('message-input') || document.querySelector('.chat-input-area input');
 
   if (chatbox) chatbox.innerHTML = '';
 
@@ -159,21 +160,40 @@ function iniciarChat(myUserId) {
   }
 
   if (chatForm && messageInput) {
-    chatForm.onsubmit = function(e) {
-      e.preventDefault();
+    const sendBtn = chatForm.querySelector('button[type="submit"]') || chatForm.querySelector('button');
+    
+    const enviarMensaje = (e) => {
+      if (e) e.preventDefault();
       const text = messageInput.value.trim();
+      
       if (text !== "") {
         push(mensajesRef, {
           senderId: myUserId,
           text: text,
           timestamp: Date.now(),
           leido: false
+        })
+        .then(() => {
+          messageInput.value = '';
+        })
+        .catch((err) => {
+          console.error("Error de Firebase al enviar mensaje:", err);
+          alert("Error al enviar mensaje. Revisa las reglas de seguridad en Firebase.");
         });
-        messageInput.value = '';
       }
     };
+
+    if (chatForm.tagName === "FORM") {
+      chatForm.onsubmit = enviarMensaje;
+    } else if (sendBtn) {
+      sendBtn.onclick = enviarMensaje;
+      messageInput.onkeypress = (e) => {
+        if (e.key === 'Enter') enviarMensaje(e);
+      };
+    }
   }
 
+  // Recepción de mensajes en tiempo real
   onChildAdded(mensajesRef, (snapshot) => {
     const msgKey = snapshot.key;
     const data = snapshot.val();
@@ -212,6 +232,7 @@ function iniciarChat(myUserId) {
     }
   });
 
+  // Listener para actualización de lecturas (palomitas azules)
   onChildChanged(mensajesRef, (snapshot) => {
     const msgKey = snapshot.key;
     const data = snapshot.val();
