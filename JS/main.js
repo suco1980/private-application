@@ -1,174 +1,22 @@
-import { 
-  signInWithEmailAndPassword, 
-  onAuthStateChanged, 
-  signOut 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { 
-  ref, push, onChildAdded, onChildChanged, update, set 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-import { db, auth } from './Firebase.js';
-import { iniciarControlPresencia } from './presence.js';
-import { activarBotonPanico } from './btn_panic.js';
-
-// Elementos del DOM
-const loginScreen = document.getElementById("login-screen");
-const chatApp = document.getElementById("chat-app");
-const loginForm = document.getElementById("login-form");
-const loginError = document.getElementById("login-error");
-const logoutBtn = document.getElementById("logout-btn");
-
-// Control de ejecución única para evitar desbordamiento de pila (Stack Overflow)
-let sesionIniciada = false;
-
-// Inicialización del Botón de Pánico
-try {
-  if (typeof activarBotonPanico === "function" && db && auth) {
-    activarBotonPanico(db, auth);
-  }
-} catch (e) {
-  console.warn("No se pudo activar el botón de pánico:", e);
-}
-
-// Control del estado de Autenticación
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    if (loginScreen) loginScreen.style.display = "none";
-    if (chatApp) {
-      chatApp.style.display = "flex";
-      chatApp.classList.add("activo");
-    }
-
-    if (!sesionIniciada) {
-      sesionIniciada = true;
-      registrarAcceso(user.uid);
-      escucharIngresoDePersona(user.uid);
-      iniciarChat(user.uid);
-    }
-  } else {
-    sesionIniciada = false;
-    if (loginScreen) loginScreen.style.display = "block";
-    if (chatApp) {
-      chatApp.style.display = "none";
-      chatApp.classList.remove("activo");
-    }
-
-    if (loginForm) loginForm.reset();
-    if (loginError) loginError.textContent = "";
-  }
-});
-
-function registrarAcceso(uid) {
-  const accesoRef = ref(db, `registros_ingreso/${uid}`);
-  set(accesoRef, {
-    usuarioId: uid,
-    fecha: Date.now()
-  }).catch((err) => console.error("Error al registrar acceso:", err));
-}
-
-function escucharIngresoDePersona(currentUid) {
-  const accesosRef = ref(db, "registros_ingreso");
-  const horaInicio = Date.now();
-
-  onChildAdded(accesosRef, (snapshot) => {
-    const data = snapshot.val();
-    if (!data) return;
-
-    if (data.usuarioId !== currentUid) {
-      const fechaAcceso = data.fecha || Date.now();
-
-      if (fechaAcceso >= horaInicio - 2000) {
-        const hora = new Date(fechaAcceso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        mostrarAlertaPantalla(`🚨 The other person joined the chat at ${hora}`);
-      }
-    }
-  });
-}
-
-function mostrarAlertaPantalla(mensaje) {
-  let alertDiv = document.getElementById("app-alert-banner");
-  if (!alertDiv) {
-    alertDiv = document.createElement("div");
-    alertDiv.id = "app-alert-banner";
-    alertDiv.style.position = "fixed";
-    alertDiv.style.top = "15px";
-    alertDiv.style.left = "50%";
-    alertDiv.style.transform = "translateX(-50%)";
-    alertDiv.style.backgroundColor = "#ff4757";
-    alertDiv.style.color = "#ffffff";
-    alertDiv.style.padding = "12px 24px";
-    alertDiv.style.borderRadius = "25px";
-    alertDiv.style.fontWeight = "bold";
-    alertDiv.style.fontSize = "14px";
-    alertDiv.style.zIndex = "99999";
-    document.body.appendChild(alertDiv);
-  }
-
-  alertDiv.textContent = mensaje;
-  alertDiv.style.display = "block";
-
-  setTimeout(() => {
-    alertDiv.style.display = "none";
-  }, 6000);
-}
-
-// Formulario de Inicio de Sesión
-if (loginForm) {
-  loginForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    if (loginError) loginError.textContent = "";
-
-    const emailInput = document.getElementById("login-email");
-    const passwordInput = document.getElementById("login-password");
-
-    if (!emailInput || !passwordInput) return;
-
-    signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value)
-      .then(() => loginForm.reset())
-      .catch(() => {
-        if (loginError) {
-          loginError.textContent = "Access denied: Incorrect email or password.";
-        }
-      });
-  });
-}
-
-// Cierre de Sesión
-if (logoutBtn) {
-  logoutBtn.addEventListener("click", () => {
-    const user = auth.currentUser;
-    if (user) {
-      update(ref(db, `presencia/${user.uid}`), {
-        online: false,
-        lastSeen: Date.now()
-      }).finally(() => signOut(auth));
-    } else {
-      signOut(auth);
-    }
-  });
-}
-
-// Lógica Principal de Chat y Envío
 function iniciarChat(myUserId) {
   const mensajesRef = ref(db, "mensajes");
-  
   const chatbox = document.getElementById('chat-box') || document.querySelector('.chat-box');
   const chatForm = document.getElementById('chat-form') || document.querySelector('.chat-input-area');
   const messageInput = document.getElementById('message-input') || document.querySelector('.chat-input-area input');
 
   if (chatbox) chatbox.innerHTML = '';
 
+  // Activar funciones auxiliares
   try {
-    if (typeof iniciarControlPresencia === "function") {
-      iniciarControlPresencia(db, myUserId);
-    }
+    if (typeof iniciarControlPresencia === "function") iniciarControlPresencia(db, myUserId);
+    manejarIndicadorEscribiendo(myUserId);
+    escucharOtroUsuarioEscribiendo(myUserId);
   } catch (e) {
-    console.warn("No se pudo iniciar control de presencia:", e);
+    console.warn(e);
   }
 
+  // Envío de mensaje
   if (chatForm && messageInput) {
-    const sendBtn = chatForm.querySelector('button[type="submit"]') || chatForm.querySelector('button');
-
     const enviarMensaje = (e) => {
       if (e) e.preventDefault();
       const text = messageInput.value.trim();
@@ -183,52 +31,47 @@ function iniciarChat(myUserId) {
         .then(() => {
           messageInput.value = '';
         })
-        .catch((err) => {
-          console.error("Error al enviar el mensaje:", err);
-        });
+        .catch((err) => console.error("Error enviando:", err));
       }
     };
 
-    if (chatForm.tagName === "FORM") {
-      chatForm.onsubmit = enviarMensaje;
-    } else {
-      if (sendBtn) sendBtn.onclick = enviarMensaje;
-      messageInput.onkeypress = (e) => {
-        if (e.key === 'Enter') enviarMensaje(e);
-      };
-    }
+    chatForm.onsubmit = enviarMensaje;
   }
 
-  // Recepción de mensajes en tiempo real
+  // Recepción de mensajes en tiempo real (Corregida)
   onChildAdded(mensajesRef, (snapshot) => {
     const msgKey = snapshot.key;
     const data = snapshot.val();
     if (!data) return;
 
+    // Si el mensaje ya existe en el DOM, no lo duplicamos
+    if (document.getElementById(`msg-${msgKey}`)) return;
+
     const isMe = data.senderId === myUserId;
     const date = new Date(data.timestamp || Date.now());
     const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    if (document.querySelector(`[data-id="${msgKey}"]`)) return;
-
     const messageDiv = document.createElement('div');
+    messageDiv.id = `msg-${msgKey}`;
     messageDiv.classList.add('message', isMe ? 'sent' : 'received');
-    messageDiv.setAttribute('data-id', msgKey);
 
     if (isMe) {
       const tickClass = data.leido ? 'ticks blue' : 'ticks grey';
       messageDiv.innerHTML = `
-        <span class="text">${data.text || data.texto || ""}</span>
-        <span class="msg-meta">${time} <span class="${tickClass}">✓✓</span></span>
+        <span class="text">${data.text || ""}</span>
+        <span class="msg-meta">${time} <span class="ticks ${tickClass}">✓✓</span></span>
       `;
     } else {
       messageDiv.innerHTML = `
-        <span class="text">${data.text || data.texto || ""}</span>
+        <span class="text">${data.text || ""}</span>
         <span class="msg-meta">${time}</span>
       `;
 
-      if (data.leido !== true) {
-        update(ref(db, `mensajes/${msgKey}`), { leido: true });
+      // Marcar como leído de forma asíncrona sin bloquear el render
+      if (!data.leido) {
+        setTimeout(() => {
+          update(ref(db, `mensajes/${msgKey}`), { leido: true });
+        }, 500);
       }
     }
 
@@ -238,13 +81,13 @@ function iniciarChat(myUserId) {
     }
   });
 
-  // Ticks azules
+  // Actualizar Ticks cuando el otro lee el mensaje
   onChildChanged(mensajesRef, (snapshot) => {
     const msgKey = snapshot.key;
     const data = snapshot.val();
 
-    if (data && data.leido === true) {
-      const msgElement = document.querySelector(`[data-id="${msgKey}"]`);
+    if (data && data.leido) {
+      const msgElement = document.getElementById(`msg-${msgKey}`);
       if (msgElement) {
         const ticks = msgElement.querySelector('.ticks');
         if (ticks) {
