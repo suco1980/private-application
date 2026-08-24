@@ -98,3 +98,5 @@ function iniciarChat(myUserId) {
     }
   });
 }
+// Al final de tu archivo main.js, agrega esta línea:
+window.iniciarChat = iniciarChat;
