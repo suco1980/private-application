@@ -4,7 +4,8 @@ import {
   push, 
   onChildAdded, 
   onChildChanged, 
-  update 
+  update,
+  off 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 function iniciarChat(myUserId) {
@@ -12,6 +13,9 @@ function iniciarChat(myUserId) {
   const chatbox = document.getElementById('chat-box') || document.querySelector('.chat-box');
   const chatForm = document.getElementById('chat-form') || document.querySelector('.chat-input-area');
   const messageInput = document.getElementById('message-input') || document.querySelector('.chat-input-area input');
+
+  // Limpiar listeners antiguos para evitar ejecuciones duplicadas
+  off(mensajesRef);
 
   if (chatbox) chatbox.innerHTML = '';
 
@@ -26,7 +30,7 @@ function iniciarChat(myUserId) {
 
   // Envío de mensaje
   if (chatForm && messageInput) {
-    const enviarMensaje = (e) => {
+    chatForm.onsubmit = (e) => {
       if (e) e.preventDefault();
       const text = messageInput.value.trim();
 
@@ -43,8 +47,6 @@ function iniciarChat(myUserId) {
         .catch((err) => console.error("Error enviando:", err));
       }
     };
-
-    chatForm.onsubmit = enviarMensaje;
   }
 
   // Recepción de mensajes en tiempo real
@@ -75,10 +77,9 @@ function iniciarChat(myUserId) {
         <span class="msg-meta">${time}</span>
       `;
 
+      // Solo marcar como leído si el mensaje NO es mío y aún NO está leído
       if (!data.leido) {
-        setTimeout(() => {
-          update(ref(db, `mensajes/${msgKey}`), { leido: true });
-        }, 500);
+        update(ref(db, `mensajes/${msgKey}`), { leido: true }).catch(() => {});
       }
     }
 
@@ -88,7 +89,7 @@ function iniciarChat(myUserId) {
     }
   });
 
-  // Actualizar Ticks cuando el otro lee el mensaje
+  // Actualizar Ticks cuando el otro usuario lee tu mensaje
   onChildChanged(mensajesRef, (snapshot) => {
     const msgKey = snapshot.key;
     const data = snapshot.val();
@@ -106,5 +107,4 @@ function iniciarChat(myUserId) {
   });
 }
 
-// Exponer la función al ámbito global
 window.iniciarChat = iniciarChat;
