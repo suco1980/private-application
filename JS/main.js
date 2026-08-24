@@ -1,3 +1,12 @@
+import { db } from './Firebase.js';
+import { 
+  ref, 
+  push, 
+  onChildAdded, 
+  onChildChanged, 
+  update 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
 function iniciarChat(myUserId) {
   const mensajesRef = ref(db, "mensajes");
   const chatbox = document.getElementById('chat-box') || document.querySelector('.chat-box');
@@ -9,10 +18,10 @@ function iniciarChat(myUserId) {
   // Activar funciones auxiliares
   try {
     if (typeof iniciarControlPresencia === "function") iniciarControlPresencia(db, myUserId);
-    manejarIndicadorEscribiendo(myUserId);
-    escucharOtroUsuarioEscribiendo(myUserId);
+    if (typeof manejarIndicadorEscribiendo === "function") manejarIndicadorEscribiendo(myUserId);
+    if (typeof escucharOtroUsuarioEscribiendo === "function") escucharOtroUsuarioEscribiendo(myUserId);
   } catch (e) {
-    console.warn(e);
+    console.warn("Error en funciones auxiliares:", e);
   }
 
   // Envío de mensaje
@@ -38,13 +47,12 @@ function iniciarChat(myUserId) {
     chatForm.onsubmit = enviarMensaje;
   }
 
-  // Recepción de mensajes en tiempo real (Corregida)
+  // Recepción de mensajes en tiempo real
   onChildAdded(mensajesRef, (snapshot) => {
     const msgKey = snapshot.key;
     const data = snapshot.val();
     if (!data) return;
 
-    // Si el mensaje ya existe en el DOM, no lo duplicamos
     if (document.getElementById(`msg-${msgKey}`)) return;
 
     const isMe = data.senderId === myUserId;
@@ -67,7 +75,6 @@ function iniciarChat(myUserId) {
         <span class="msg-meta">${time}</span>
       `;
 
-      // Marcar como leído de forma asíncrona sin bloquear el render
       if (!data.leido) {
         setTimeout(() => {
           update(ref(db, `mensajes/${msgKey}`), { leido: true });
@@ -98,5 +105,6 @@ function iniciarChat(myUserId) {
     }
   });
 }
-// Al final de tu archivo main.js, agrega esta línea:
+
+// Exponer la función al ámbito global
 window.iniciarChat = iniciarChat;
