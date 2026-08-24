@@ -65,17 +65,8 @@ body {
     text-align: center;
 }
 
-/* Visibilidad del Chat (Controlado por JavaScript) */
-#chat-app, .chat_container {
-    display: none !important; /* Oculto por defecto antes de iniciar sesión */
-}
-
-#chat-app.activo, .chat_container.activo {
-    display: flex !important; /* Se activa solo al autenticarse */
-}
-
 /* Contenedor del Chat */
-.chat_container {
+.chat_container, #chat-app {
     width: 100%;
     max-width: 450px;
     height: 90vh;
@@ -241,7 +232,7 @@ body {
 
 /* Botón Pánico */
 .panic-btn {
-    background-color: #00a884;
+    background-color: #d32f2f;
     color: white;
     border: none;
     padding: 12px 14px;
@@ -253,7 +244,7 @@ body {
 }
 
 .panic-btn:hover {
-    background-color: #bd2130;
+    background-color: #b71c1c;
 }
 
 /* Ajustes Responsive para Móviles */
@@ -263,7 +254,7 @@ body {
         padding: 0;
     }
 
-    .chat_container {
+    .chat_container, #chat-app {
         max-width: 100%;
         height: 100vh;
         border-radius: 0;
