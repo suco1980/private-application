@@ -1,41 +1,39 @@
 import { auth } from './Firebase.js';
-import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+    signInWithEmailAndPassword, 
+    setPersistence, 
+    inMemoryPersistence 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// 1. Capturar elementos del DOM
 const loginForm = document.getElementById('login-form');
-const loginError = document.getElementById('login-error');
+const loginEmail = document.getElementById('login-email');
+const loginPassword = document.getElementById('login-password');
+const errorMsg = document.getElementById('error-msg');
 const loginScreen = document.getElementById('login-screen');
 const chatApp = document.getElementById('chat-app');
 
-// 2. Escuchar el evento de envío (submit)
 if (loginForm) {
-  loginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const email = loginEmail.value.trim();
+        const password = loginPassword.value.trim();
 
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-
-    if (loginError) loginError.textContent = '';
-
-    // 3. Autenticar con Firebase
-    signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        // Ocultar pantalla de Login
-        if (loginScreen) loginScreen.style.display = 'none';
-
-        // Mostrar pantalla de Chat
-        if (chatApp) chatApp.style.display = 'flex';
-
-        // Iniciar la lógica de mensajes pasando el ID del usuario
-        if (typeof window.iniciarChat === "function") {
-          window.iniciarChat(userCredential.user.uid);
-        }
-      })
-      .catch((error) => {
-        console.error("Error al iniciar sesión:", error);
-        if (loginError) {
-          loginError.textContent = "Correo o contraseña incorrectos.";
-        }
-      });
-  });
+        // 1. Usa persistencia en memoria (se borra al recargar la página)
+        setPersistence(auth, inMemoryPersistence)
+            .then(() => {
+                return signInWithEmailAndPassword(auth, email, password);
+            })
+            .then(() => {
+                // 2. Muestra el chat inmediatamente tras el inicio exitoso
+                if (errorMsg) errorMsg.textContent = "";
+                loginForm.reset();
+                if (loginScreen) loginScreen.style.display = 'none';
+                if (chatApp) chatApp.style.display = 'flex';
+            })
+            .catch((error) => {
+                console.error("Error de autenticación:", error);
+                if (errorMsg) errorMsg.textContent = "Correo o contraseña incorrectos.";
+            });
+    });
 }
