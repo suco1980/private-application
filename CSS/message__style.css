@@ -189,7 +189,7 @@ html, body {
 
 /* Botón de Pánico (Redondo con X) */
 .panic-btn {
-    background-color: #d93838 !important; /* Corregido a rojo claro para diferenciarlo */
+    background-color: #00a884 !important; /* Corregido a rojo claro para diferenciarlo */
     color: #ffffff !important;
     border: none;
     width: 42px;
