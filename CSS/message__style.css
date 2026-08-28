@@ -1,189 +1,123 @@
-/* Reset Básico Universal */
+/* Configuración global y reset */
 * {
+    box-sizing: border-box;
+}
+
+body, html {
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; 
-}
-
-body {
-    background-color: #d1d7db;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-}
-
-/* Pantalla de Login */
-#login-screen {
     width: 100%;
-    max-width: 400px;
-    padding: 24px;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-.login-container h2 {
-    margin-bottom: 15px;
-    color: #111b21;
-    text-align: center;
-}
-
-.login-container input {
-    width: 100%;
-    padding: 12px;
-    margin-top: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 16px;
-}
-
-.login-container button {
-    width: 100%;
-    padding: 12px;
-    margin-top: 10px;
-    background: #00a884;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 16px;
-    transition: background 0.2s;
-}
-
-.login-container button:hover {
-    background: #075e54;
-}
-
-.error-msg {
-    color: #d32f2f;
-    font-size: 0.85rem;
-    margin-top: 10px;
-    text-align: center;
-}
-
-/* Contenedor del Chat (Layout Flexbox) */
-#chat-app.chat_container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    max-width: 450px;
-    height: 90vh;
-    background-color: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    height: 100vh;
+    background-color: #0b141a;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #e9edef;
     overflow: hidden;
 }
 
-/* Encabezado del Chat */
-.chat-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #075e54;
-    color: #ffffff;
-    padding: 10px 15px;
-    text-align: center;
-    min-height: 60px;
-}
-
-.user-info {
+/* Contenedor principal adaptable */
+.chat_container {
     display: flex;
     flex-direction: column;
+    width: 100%;
+    height: 100vh;
+    max-width: 1000px;
+    margin: 0 auto;
+    background-color: #0b141a;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Encabezado */
+.chat-header {
+    background-color: #202c33;
+    padding: 10px 16px;
+    display: flex;
     align-items: center;
+    min-height: 60px;
+    border-bottom: 1px solid #222d34;
+    flex-shrink: 0;
 }
 
 .user-info h2 {
     margin: 0;
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1rem;
+    color: #e9edef;
 }
 
-#user-status {
+.user-status {
     font-size: 0.75rem;
-    color: #ffffff;
-    margin-top: 2px;
-    display: block;
-    transform: color 0.2s ease;
-}
-#user-status.typing-tag {
-    color: #00a884; 
-    font-weight: 500;
-}
-#user-status.online-tag {
-    color: #25d366;
+    color: #ffffff !important;
 }
 
-/* Área de Mensajes */
+/* Área de mensajes */
 .chat-box {
-    flex: 1 1 auto;
-    padding: 16px;
-    background-color: #efeae2;
+    flex: 1;
+    padding: 12px 16px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
 }
 
-/* Burbujas de Mensaje Estilo WhatsApp */
-.mensaje-item {
-    display: block; /* Mantiene la hora alineada abajo a la derecha de forma fluida */
+/* Burbujas de mensajes responsivas */
+.mensaje-propio, .mensaje-ajeno {
     max-width: 75%;
-    padding: 6px 9px 4px 9px;
+    padding: 6px 10px 8px 10px;
     border-radius: 7.5px;
-    font-size: 0.91rem;
-    line-height: 1.35;
-    word-wrap: break-word;
+    font-size: 0.92rem;
+    line-height: 1.4;
+    word-break: break-word;
     position: relative;
-    box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+    box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
 }
 
+@media (min-width: 768px) {
+    .mensaje-propio, .mensaje-ajeno {
+        max-width: 60%;
+    }
+}
+
+/* Mensaje propio (Verde WhatsApp) */
 .mensaje-propio {
-    background-color: #d9fdd3;
+    background-color: #005c4b;
+    color: #e9edef;
     align-self: flex-end;
     border-top-right-radius: 0;
 }
 
+/* Mensaje ajeno (Gris oscuro WhatsApp) */
 .mensaje-ajeno {
-    background-color: #ffffff;
+    background-color: #202c33;
+    color: #e9edef;
     align-self: flex-start;
     border-top-left-radius: 0;
 }
 
-.mensaje-item p {
-    display: inline; /* Permite que la hora se coloque al lado del texto si hay espacio */
-    margin: 0;
-    color: #111b21;
-    font-size: 0.91rem;
-    word-break: break-word;
+/* Texto del mensaje */
+.texto-mensaje {
+    display: inline-block;
+    padding-right: 55px;
 }
 
-/* Contenedor de Hora y Ticks */
+/* Contenedor de hora y ticks (abajo a la derecha) */
 .mensaje-info {
+    position: absolute;
+    right: 8px;
+    bottom: 3px;
     display: inline-flex;
     align-items: center;
-    float: right;
     gap: 3px;
-    margin-left: 8px;
-    margin-top: 4px;
-    height: 12px;
+    font-size: 0.65rem;
+    color: #8696a0;
 }
 
-.hora {
+.hora-mensaje {
     font-size: 0.65rem;
-    color: #667781;
-    user-select: none;
 }
 
 .tick {
-    font-size: 0.75rem;
-    font-weight: bold;
-    letter-spacing: -2px;
-    line-height: 1;
-    user-select: none;
+    font-size: 0.65rem;
 }
 
 .tick-gris {
@@ -194,65 +128,165 @@ body {
     color: #53bdeb;
 }
 
-/* Input y Botones del Chat */
+/* Formulario de entrada */
 .chat-input-area {
+    background-color: #202c33;
+    padding: 10px 12px;
     display: flex;
-    padding: 12px;
-    background-color: #f0f2f5;
-    gap: 8px;
     align-items: center;
-    border-top: 1px solid #e0e0e0;
+    gap: 10px;
+    min-height: 65px;
+    flex-shrink: 0;
 }
 
-.chat-input-area input {
+#message-input {
     flex: 1;
+    background-color: #2a3942;
+    color: #e9edef;
+    border: none;
     padding: 12px 16px;
-    border: 1px solid #cccccc;
-    border-radius: 20px;
-    outline: none;
+    border-radius: 8px;
     font-size: 0.95rem;
+    outline: none;
+    min-width: 0;
 }
 
-.chat-input-area input:focus {
-    border-color: #00a884;
+#message-input::placeholder {
+    color: #8696a0;
 }
 
-.chat-input-area button[type="submit"] {
-    background-color: #00a884;
-    color: white;
+/* Botón de Enviar (Redondo con Flecha) */
+.send-btn {
+    background-color: #00a884 !important;
+    color: #ffffff !important;
     border: none;
-    padding: 12px 18px;
-    border-radius: 20px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
     cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.2s;
+    padding: 0;
+    flex-shrink: 0;
+    transition: background 0.2s;
 }
 
-.chat-input-area button[type="submit"]:hover {
-    background-color: #075e54;
+.send-btn:hover {
+    background-color: #01755f !important;
 }
 
+/* Botón de Pánico (Redondo con X) */
 .panic-btn {
-    background-color: #d32f2f;
-    color: white;
+    background-color: #00a884 !important;
+    color: #ffffff !important;
     border: none;
-    padding: 12px 14px;
-    border-radius: 20px;
-    cursor: pointer;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
     font-weight: bold;
-    font-size: 0.85rem;
-    transition: background-color 0.2s;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: background 0.2s;
 }
 
 .panic-btn:hover {
-    background-color: #b71c1c;
+    background-color: #b52b2b !important;
 }
 
-/* Adaptación Móvil */
-@media (max-width: 600px) {
-    #chat-app.chat_container {
-        max-width: 100%;
-        height: 100vh;
-        border-radius: 0;
+@media (max-width: 480px) {
+    .chat-input-area {
+        padding: 8px;
+        gap: 6px;
     }
+}
+
+
+
+
+/* ==========================================
+   ESTILOS PARA LA PANTALLA DE LOGIN (index.html)
+   ========================================== */
+
+body.login-body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #0b141a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #e9edef;
+    overflow: hidden;
+}
+
+.login-container {
+    background-color: #202c33;
+    padding: 35px 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.login-container h2 {
+    margin-top: 0;
+    margin-bottom: 24px;
+    color: #e9edef;
+    font-size: 1.5rem;
+}
+
+.login-container .input-group {
+    margin-bottom: 16px;
+}
+
+.login-container .input-group input {
+    width: 100%;
+    background-color: #2a3942;
+    color: #e9edef;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.login-container .input-group input::placeholder {
+    color: #8696a0;
+}
+
+.login-btn {
+    width: 100%;
+    background-color: #00a884;
+    color: #ffffff;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 10px;
+}
+
+.login-btn:hover {
+    background-color: #01755f;
+}
+
+.error-msg {
+    color: #f15c6d;
+    font-size: 0.85rem;
+    margin-top: 12px;
+    margin-bottom: 0;
 }

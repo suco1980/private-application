@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--  -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <!--  -->
+    <title>WEB MESSAGE</title>
+    <link rel="stylesheet" href="CSS/message__style.css">
+</head>
+<body>
+    
+    <!-- Pantalla del Chat -->
+    <div id="chat-app" class="chat_container">
+        
+        <!-- 1. ENCABEZADO -->
+        <header class="chat-header">
+            <div class="user-info">
+                <h2>Knot</h2>
+                <span id="user-status" class="user-status"></span>
+            </div>
+        </header>
+
+        <!-- 2. CAJA DE MENSAJES -->
+        <main id="chat-box" class="chat-box"> 
+            <!-- Mensajes dinámicos -->
+        </main>
+
+        <!-- 3. FORMULARIO CON INPUT Y BOTONES REDONDOS -->
+        <form id="chatForm" class="chat-input-area">
+            <input type="text" id="message-input" placeholder="Escribe un mensaje..." required autocomplete="off">
+            <button type="submit" id="sendButton" class="send-btn">➔</button>
+            <button type="button" id="btn-panico" class="panic-btn">✕</button>
+        </form>
+
+    </div>
+
+    <!-- Scripts JS -->
+    <script type="module" src="./JS/Firebase.js"></script>
+    <script type="module" src="./JS/presence.js"></script>
+    <script type="module" src="./JS/ticks.js"></script>
+    <script type="module" src="./JS/main.js?v=1"></script>
+</body>
+</html>

@@ -1,134 +1,152 @@
-import { db, auth } from './Firebase.js';
-import { ref, push, set, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { auth, db } from './Firebase.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { registrarPresencia, escucharEstadoOtroUsuario, setTypingStatus } from './presence.js';
-import { getOtroUsuarioConectado } from './ticks.js'; // <- CAMBIO AQUÍ
-
-const messageInput = document.getElementById('message-input');
-const chatForm = document.getElementById('chatForm');
-const chatBox = document.getElementById('chat-box');
-const loginScreen = document.getElementById('login-screen');
-const chatApp = document.getElementById('chat-app');
-const btnPanico = document.getElementById('btn-panico');
-const userStatusHeader = document.getElementById('user-status');
-
-let usuarioActual = null;
-let escuchandoOtroUsuario = false;
-let typingTimeout = null;
-
-function escucharMensajes() {
-    const mensajesRef = ref(db, 'mensajes');
-    chatBox.innerHTML = ''; 
-
-    onChildAdded(mensajesRef, (snapshot) => {
-        const mensaje = snapshot.val();
-
-        const mensajeDiv = document.createElement('div');
-        mensajeDiv.classList.add('mensaje-item');
-        
-        const horaMensaje = new Date(mensaje.timestamp || Date.now()).toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit',
-            hour12: true 
-        });
-
-        if (usuarioActual && mensaje.uid === usuarioActual.uid) {
-            mensajeDiv.classList.add('mensaje-propio');
-            
-            // Consultar si el otro usuario está conectado al pintar este mensaje
-            const claseTick = getOtroUsuarioConectado() ? 'tick-azul' : 'tick-gris';
-
-            mensajeDiv.innerHTML = `
-                <p>${mensaje.texto} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
-                <div class="mensaje-info">
-                    <span class="hora">${horaMensaje}</span>
-                    <span class="tick ${claseTick}">✓✓</span>
-                </div>
-            `;
-        } else {
-            mensajeDiv.classList.add('mensaje-ajeno');
-            mensajeDiv.innerHTML = `
-                <p>${mensaje.texto} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
-                <div class="mensaje-info">
-                    <span class="hora">${horaMensaje}</span>
-                </div>
-            `;
-        }
-
-        chatBox.appendChild(mensajeDiv);
-        chatBox.scrollTop = chatBox.scrollHeight;
-    });
-}
-
-if (messageInput) {
-    messageInput.addEventListener('input', () => {
-        if (!usuarioActual) return;
-
-        setTypingStatus(usuarioActual.uid, true);
-
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-            setTypingStatus(usuarioActual.uid, false);
-        }, 2000);
-    });
-}
+import { ref, push, set, update, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { registerPresence, listenToOtherUserStatus } from './presence.js';
+import { actualizarColorTicksMensaje } from './ticks.js';
 
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        usuarioActual = user;
-        if (loginScreen) loginScreen.style.display = 'none';
-        if (chatApp) chatApp.style.display = 'flex';
-        
-        registrarPresencia(user.uid);
+        // 1. Registrar propia presencia
+        registerPresence(user.uid);
 
-        const statusRef = ref(db, 'status');
-        onValue(statusRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const otroUsuarioUid = Object.keys(data).find(uid => uid !== user.uid);
-                if (otroUsuarioUid && !escuchandoOtroUsuario) {
-                    escucharEstadoOtroUsuario(otroUsuarioUid, userStatusHeader);
-                    escuchandoOtroUsuario = true;
+        // 2. Escuchar el estado del otro usuario y su señal de "Escribiendo..."
+        const statusElement = document.getElementById("user-status");
+        const otherUserUid = "E4ltgYTHjpgjjdo8n1Kwk6JL32r2"; 
+
+        if (otherUserUid) {
+            listenToOtherUserStatus(otherUserUid, statusElement);
+
+            // Escuchar si el otro usuario está escribiendo
+            const otherUserTypingRef = ref(db, `typing/${otherUserUid}`);
+            onValue(otherUserTypingRef, (snapshot) => {
+                const isTyping = snapshot.val();
+                if (isTyping) {
+                    statusElement.textContent = "typing...";
+                    statusElement.style.color = "#ffffff";
+                } else {
+                    listenToOtherUserStatus(otherUserUid, statusElement);
                 }
-            }
-        });
-
-        escucharMensajes();
-    } else {
-        usuarioActual = null;
-        if (loginScreen) loginScreen.style.display = 'block';
-        if (chatApp) chatApp.style.display = 'none';
-    }
-});
-
-if (chatForm) {
-    chatForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const texto = messageInput.value.trim();
-
-        if (texto !== "" && usuarioActual) {
-            setTypingStatus(usuarioActual.uid, false);
-            clearTimeout(typingTimeout);
-
-            const mensajesRef = ref(db, 'mensajes');
-            const nuevoMensajeRef = push(mensajesRef);
-
-            set(nuevoMensajeRef, {
-                texto: texto,
-                usuario: usuarioActual.email,
-                uid: usuarioActual.uid,
-                timestamp: Date.now()
-            })
-            .then(() => {
-                messageInput.value = "";
             });
         }
-    });
-}
 
-if (btnPanico) {
-    btnPanico.addEventListener('click', () => {
-        signOut(auth);
-        window.location.replace("https://www.google.com");
-    });
-}
+        // 3. Envío de mensajes y detector de "Escribiendo..." propio
+        const chatForm = document.getElementById("chatForm");
+        const messageInput = document.getElementById("message-input");
+        const typingIndicatorRef = ref(db, `typing/${user.uid}`);
+        let typingTimer;
+
+        if (messageInput) {
+            messageInput.addEventListener("input", () => {
+                set(typingIndicatorRef, true);
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(() => {
+                    set(typingIndicatorRef, false);
+                }, 2000);
+            });
+        }
+
+        if (chatForm) {
+            chatForm.onsubmit = (e) => {
+                e.preventDefault();
+                const messageText = messageInput.value.trim();
+                if (!messageText) return;
+
+                // Al enviar mensaje, apagamos inmediatamente el indicador de escritura
+                set(typingIndicatorRef, false);
+                clearTimeout(typingTimer);
+
+                const messagesRef = ref(db, 'mensajes');
+                const newMessage = {
+                    senderId: user.uid,
+                    text: messageText,
+                    timestamp: serverTimestamp(),
+                    leido: false
+                };
+
+                push(messagesRef, newMessage)
+                    .then(() => {
+                        messageInput.value = "";
+                    })
+                    .catch((error) => {
+                        console.error("Error sending message:", error);
+                    });
+            };
+        }
+
+        // 4. Escuchar mensajes, formatear hora, ticks pequeños y lectura persistente
+        const messagesRef = ref(db, 'mensajes');
+        onValue(messagesRef, (snapshot) => {
+            const chatBox = document.getElementById("chat-box");
+            if (!chatBox) return;
+            chatBox.innerHTML = ""; 
+
+            const data = snapshot.val();
+            if (!data) return;
+
+            Object.keys(data).forEach((key) => {
+                const message = data[key];
+                const isMine = message.senderId === user.uid;
+
+                let formattedTime = "";
+                if (message.timestamp) {
+                    const date = new Date(message.timestamp);
+                    formattedTime = date.toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: true 
+                    });
+                }
+
+                const messageDiv = document.createElement("div");
+                messageDiv.className = isMine ? "mensaje-propio" : "mensaje-ajeno";
+                messageDiv.setAttribute("data-id", key);
+
+                messageDiv.innerHTML = `
+                    <span class="texto-mensaje">${message.text}</span>
+                    <div class="mensaje-info">
+                        <span class="hora-mensaje">${formattedTime}</span>
+                        ${isMine ? `<span class="tick ${message.leido ? 'tick-azul' : 'tick-gris'}">✔✔</span>` : ''}
+                    </div>
+                `;
+                chatBox.appendChild(messageDiv);
+
+                // Marcar como leído permanentemente si el receptor lo visualiza
+                if (!isMine && !message.leido) {
+                    const singleMessageRef = ref(db, `mensajes/${key}`);
+                    update(singleMessageRef, { leido: true });
+                }
+
+                // Actualizar color de tick si es propio
+                if (isMine) {
+                    actualizarColorTicksMensaje(key, message.leido);
+                }
+            });
+        });
+
+        // 5. Botón de Pánico (Acción inmediata: offline, cierra sesión y abre Google sin avisos)
+        const panicBtn = document.getElementById("btn-panico");
+
+        if (panicBtn) {
+            panicBtn.addEventListener("click", () => {
+                const userStatusRef = ref(db, `status/${user.uid}`);
+                const typingIndicatorRef = ref(db, `typing/${user.uid}`);
+
+                // Limpiar estado de escritura y poner offline antes de salir
+                set(typingIndicatorRef, false);
+                set(userStatusRef, {
+                    state: 'offline',
+                    lastChanged: serverTimestamp()
+                }).then(() => {
+                    signOut(auth).then(() => {
+                        window.location.href = "https://www.google.com";
+                    });
+                }).catch((error) => {
+                    console.error("Error activating panic button:", error);
+                });
+            });
+        }
+
+    } else {
+        console.log("No authenticated user. Credentials required.");
+    }
+});
