@@ -204,27 +204,7 @@ body, html {
     .chat-input-area {
         padding: 8px;
         gap: 6px;
-        html, body {
-        height: 100%;
-        height: 100dvh; /* Usa la altura dinámica real del dispositivo móvil */
-        overflow: hidden;
-    }
-
-    .chat_container {
-        width: 100% !important;
-        height: 100% !important;
-        height: 100dvh !important;
-        max-width: 100% !important;
-        box-shadow: none;
-        border-radius: 0;
-    }
-
-    /* Asegura que el área de mensajes expanda bien el espacio */
-    .chat-box {
-        flex: 1;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch; /* Desplazamiento fluido en iPhone/Android */
-    }
+        
     }
     
 }
